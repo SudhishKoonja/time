@@ -441,7 +441,7 @@ const Timetable = ({ entries, theme, font, spacing }: { entries: Entry[], theme:
           const isSameDateAsPrev = index > 0 && entry.date === entries[index - 1].date;
 
           return (
-            <tr key={entry.id}>
+            <tr key={entry.id} className="pdf-avoid-break">
               <td style={{ borderColor: theme.borderColor, borderWidth: '1px' }} className={`${spacing.value} text-left text-gray-900`}>
                 {!isSameDateAsPrev ? formatDate(entry.date) : ''}
               </td>
@@ -477,12 +477,14 @@ export default function App() {
     const element = printRef.current;
     if (!element) return;
 
+    const today = new Date().toISOString().split('T')[0];
     const opt = {
-      margin:       0,
-      filename:     'timetable.pdf',
+      margin:       [8, 8, 8, 8],
+      filename:     `timetable-${today}.pdf`,
       image:        { type: 'jpeg', quality: 0.98 },
       html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak:    { mode: ['css', 'legacy'] }
     };
 
     html2pdf().set(opt).from(element).save();
@@ -525,6 +527,7 @@ export default function App() {
             <button 
               onClick={handleDownloadPdf} 
               className="px-3 py-2 bg-white text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-2 text-sm font-medium shadow-sm"
+              title="Download timetable as PDF"
             >
               <Download size={16} />
               PDF
