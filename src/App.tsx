@@ -89,10 +89,18 @@ const PREDEFINED_SUBJECTS = [
 const AUTO_FILL_TEMPLATE = [
   { subject: 'English General Paper', papers: ['1', '2'] },
   { subject: 'Computer Science (M & S)', papers: ['1', '2'] },
-  { subject: 'Chemistry', papers: ['1', '2', '3'] },
-  { subject: 'Physics', papers: ['1', '2', '3'] },
-  { subject: 'Mathematics', papers: ['1', '3'] },
+  { subject: 'Chemistry', papers: ['1', '2', '3', '4', '5'] },
+  { subject: 'Physics', papers: ['1', '2', '3', '4', '5'] },
+  { subject: 'Mathematics', papers: ['1', '3', '4', '5'] },
 ];
+
+const SUBJECT_PAPER_OPTIONS: Record<string, string[]> = {
+  'English General Paper': ['1', '2'],
+  'Computer Science (M & S)': ['1', '2'],
+  Chemistry: ['1', '2', '3', '4', '5'],
+  Physics: ['1', '2', '3', '4', '5'],
+  Mathematics: ['1', '3', '4', '5'],
+};
 
 const initialEntries: Entry[] = [
   { id: '1', date: '2025-10-02', startTime: '08:00', endTime: '10:00', subject: 'English General Paper', paper: '2' },
@@ -330,15 +338,90 @@ const EntryList = ({ entries, onDelete, onClearAll }: { entries: Entry[], onDele
   );
 };
 
-const HubsMode = ({ entries, onDelete, onClearAll }: { entries: Entry[], onDelete: (id: string) => void, onClearAll: () => void }) => {
+const HubsMode = ({ entries, onDelete, onClearAll, onAdd }: { entries: Entry[], onDelete: (id: string) => void, onClearAll: () => void, onAdd: (entry: Entry) => void }) => {
+  const [date, setDate] = useState('');
+  const [startTime, setStartTime] = useState('08:00');
+  const [endTime, setEndTime] = useState('10:00');
+  const [subject, setSubject] = useState('Mathematics');
+  const [paper, setPaper] = useState('1');
+
   const grouped = entries.reduce<Record<string, Entry[]>>((acc, entry) => {
     acc[entry.date] = acc[entry.date] || [];
     acc[entry.date].push(entry);
     return acc;
   }, {});
 
+  useEffect(() => {
+    const options = SUBJECT_PAPER_OPTIONS[subject] ?? ['1'];
+    if (!options.includes(paper)) {
+      setPaper(options[0]);
+    }
+  }, [subject, paper]);
+
+  const addFromHubs = () => {
+    if (!date || !startTime || !endTime || !subject || !paper) return;
+
+    onAdd({
+      id: crypto.randomUUID(),
+      date,
+      startTime,
+      endTime,
+      subject,
+      paper
+    });
+  };
+
   return (
     <div className="space-y-4">
+      <section className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-3">
+        <h2 className="text-sm font-semibold text-gray-900">Quick add paper</h2>
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="col-span-2 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50"
+          />
+          <input
+            type="time"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50"
+          />
+          <input
+            type="time"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50"
+          />
+          <select
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50"
+          >
+            {Object.keys(SUBJECT_PAPER_OPTIONS).map((item) => (
+              <option key={item} value={item}>{item}</option>
+            ))}
+          </select>
+          <select
+            value={paper}
+            onChange={(e) => setPaper(e.target.value)}
+            className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50"
+          >
+            {(SUBJECT_PAPER_OPTIONS[subject] ?? ['1']).map((item) => (
+              <option key={item} value={item}>Paper {item}</option>
+            ))}
+          </select>
+        </div>
+        <button
+          type="button"
+          onClick={addFromHubs}
+          className="w-full py-2.5 bg-indigo-600 text-white text-sm font-semibold rounded-lg"
+        >
+          Add paper
+        </button>
+      </section>
+
       <div className="flex justify-end">
         <button
           type="button"
@@ -665,7 +748,7 @@ export default function App() {
         
         <div className="flex-1 overflow-y-auto p-5 bg-gray-50/50">
           {mode === 'hubs' ? (
-            <HubsMode entries={sortedEntries} onDelete={handleDelete} onClearAll={handleClearAll} />
+            <HubsMode entries={sortedEntries} onDelete={handleDelete} onClearAll={handleClearAll} onAdd={handleAdd} />
           ) : activeTab === 'entries' ? (
             <>
               <EntryForm onAdd={handleAdd} />
