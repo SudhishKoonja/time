@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
-import { Plus, Trash2, Printer, Calendar, Clock, BookOpen, FileText, Settings, Palette, Type, Layout, List, ChevronDown, Download, X } from 'lucide-react';
+import { Plus, Trash2, Printer, Calendar, Clock, BookOpen, FileText, Settings, Palette, Type, Layout, List, ChevronDown, Download, X, Wand2 } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 
 function getOrdinalNum(n: number) {
@@ -27,6 +27,12 @@ function formatTime(timeString: string) {
   if (!timeString) return '';
   const [hour, minute] = timeString.split(':');
   return `${parseInt(hour, 10)}:${minute}`;
+}
+
+function addDays(dateString: string, daysToAdd: number) {
+  const date = new Date(dateString);
+  date.setDate(date.getDate() + daysToAdd);
+  return date.toISOString().split('T')[0];
 }
 
 type Entry = {
@@ -76,6 +82,14 @@ const PREDEFINED_SUBJECTS = [
   'Mathematics',
   'Physics',
   'Physics(Practical)'
+];
+
+const AUTO_FILL_TEMPLATE = [
+  { subject: 'English General Paper', papers: ['1', '2'] },
+  { subject: 'Computer Science (M & S)', papers: ['1', '2'] },
+  { subject: 'Chemistry', papers: ['1', '2', '3'] },
+  { subject: 'Physics', papers: ['1', '2', '3'] },
+  { subject: 'Mathematics', papers: ['1', '3'] },
 ];
 
 const initialEntries: Entry[] = [
@@ -303,6 +317,110 @@ const EntryList = ({ entries, onDelete }: { entries: Entry[], onDelete: (id: str
   );
 };
 
+const AutoFillPapers = ({ onAddMany }: { onAddMany: (entries: Omit<Entry, 'id'>[]) => void }) => {
+  const [startDate, setStartDate] = useState('');
+  const [startTime, setStartTime] = useState('08:00');
+  const [endTime, setEndTime] = useState('10:00');
+  const [setCount, setSetCount] = useState(1);
+
+  const handleAutofill = () => {
+    if (!startDate || !startTime || !endTime || setCount < 1) return;
+
+    const weekDates = Array.from({ length: 7 }, (_, index) => addDays(startDate, index));
+    const generated: Omit<Entry, 'id'>[] = [];
+    let slot = 0;
+
+    for (let setIndex = 0; setIndex < setCount; setIndex++) {
+      AUTO_FILL_TEMPLATE.forEach(({ subject, papers }) => {
+        papers.forEach((paper) => {
+          generated.push({
+            date: weekDates[slot % weekDates.length],
+            startTime,
+            endTime,
+            subject,
+            paper: setCount > 1 ? `${paper} (Set ${setIndex + 1})` : paper
+          });
+          slot++;
+        });
+      });
+    }
+
+    onAddMany(generated);
+  };
+
+  const totalPapersPerSet = AUTO_FILL_TEMPLATE.reduce((sum, item) => sum + item.papers.length, 0);
+
+  return (
+    <div className="space-y-4 bg-white p-5 rounded-xl border border-gray-200 shadow-sm mb-6">
+      <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Auto-fill papers (1 week)</h2>
+
+      <p className="text-xs text-gray-500">
+        Generates all core papers and spreads them across 7 days starting from your chosen date.
+      </p>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Week Start Date</label>
+        <div className="relative">
+          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-gray-50 focus:bg-white"
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1.5">Start Time</label>
+          <input
+            type="time"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-gray-50 focus:bg-white"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-700 mb-1.5">End Time</label>
+          <input
+            type="time"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-gray-50 focus:bg-white"
+            required
+          />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-xs font-semibold text-gray-700 mb-1.5">Number of Sets</label>
+        <input
+          type="number"
+          min={1}
+          value={setCount}
+          onChange={(e) => setSetCount(Math.max(1, Number(e.target.value) || 1))}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-gray-50 focus:bg-white"
+        />
+        <p className="text-[11px] text-gray-500 mt-1">
+          {totalPapersPerSet} papers per set · {totalPapersPerSet * setCount} total entries.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleAutofill}
+        className="w-full py-2.5 mt-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-sm shadow-indigo-200"
+      >
+        <Wand2 size={16} />
+        Auto-fill all papers
+      </button>
+    </div>
+  );
+};
+
 const Timetable = ({ entries, theme, font, spacing }: { entries: Entry[], theme: Theme, font: typeof FONTS[0], spacing: typeof SPACING[0] }) => {
   return (
     <table 
@@ -375,6 +493,14 @@ export default function App() {
     setActiveTab('entries'); // Switch back to entries tab to see the new entry
   };
 
+  const handleAddMany = (newEntries: Omit<Entry, 'id'>[]) => {
+    setEntries((prev) => [
+      ...prev,
+      ...newEntries.map((entry) => ({ ...entry, id: crypto.randomUUID() }))
+    ]);
+    setActiveTab('entries');
+  };
+
   const handleDelete = (id: string) => {
     setEntries(entries.filter(e => e.id !== id));
   };
@@ -432,6 +558,7 @@ export default function App() {
           {activeTab === 'entries' ? (
             <>
               <EntryForm onAdd={handleAdd} />
+              <AutoFillPapers onAddMany={handleAddMany} />
               <EntryList entries={sortedEntries} onDelete={handleDelete} />
             </>
           ) : (
