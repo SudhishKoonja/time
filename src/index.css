@@ -8,6 +8,11 @@
     padding: 20mm;
     margin: 0 auto;
   }
+
+  .pdf-avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
 }
 
 @media print {
